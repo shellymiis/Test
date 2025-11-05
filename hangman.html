@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hangman Game</title>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(180deg, #ffbb5c, #ff7b00, #ff5400);
+        color: #fff7ec;
+        text-align: center;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      h1 {
+        font-size: 2.7rem;
+        margin-bottom: 8px;
+        text-shadow: 2px 2px 10px rgba(255, 88, 0, 0.6);
+      }
+
+      p {
+        margin-bottom: 20px;
+        color: #ffe9d6;
+      }
+
+      #word {
+        font-size: 2rem;
+        letter-spacing: 10px;
+        margin: 20px 0;
+      }
+
+      #letters {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 400px;
+      }
+
+      #letters button {
+        background: white;
+        color: black;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        margin: 4px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+
+      #letters button:hover:not(:disabled) {
+        background-color: #f2f2f2;
+        transform: scale(1.1);
+      }
+
+      #letters button:disabled {
+        background-color: #d9d9d9;
+        color: #777;
+        text-decoration: line-through;
+      }
+
+      #message {
+        margin-top: 15px;
+        min-height: 25px;
+        font-weight: bold;
+      }
+
+      .buttons {
+        margin-top: 20px;
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .buttons button,
+      .popup-content button {
+        background: white;
+        color: black;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .buttons button:hover,
+      .popup-content button:hover {
+        background-color: #f2f2f2;
+        transform: scale(1.05);
+      }
+
+      /* Popup */
+      #popup {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+      }
+
+      .popup-content {
+        background: white;
+        color: black;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Confetti */
+      .confetti {
+        position: fixed;
+        top: 0;
+        width: 10px;
+        height: 14px;
+        border-radius: 3px;
+        animation: fall 3s linear infinite;
+        opacity: 0.9;
+        z-index: 1;
+      }
+
+      @keyframes fall {
+        from {
+          transform: translateY(-10vh) rotate(0deg);
+        }
+        to {
+          transform: translateY(110vh) rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Hangman Animal Theme</h1>
+    <p id="subtitle">Choose a level to begin!</p>
+    <div id="word"></div>
+    <div id="letters"></div>
+    <div id="message"></div>
+
+    <div class="buttons">
+      <button id="hint">💡 Hint</button>
+      <button id="reset">🔁 Restart</button>
+    </div>
+
+    <div id="popup">
+      <div class="popup-content">
+        <h2 id="popup-title"></h2>
+        <p id="popup-text"></p>
+        <button id="popup-btn">Play Again</button>
+      </div>
+    </div>
+
+    <script>
+      const words = {
+        easy: ["CAT", "DOG", "BAT", "BEAR"],
+        medium: ["DOLPHIN", "PENGUIN", "PANTHER"],
+        hard: ["CROCODILE", "CHAMELEON", "HIPPOPOTAMUS"],
+      };
+
+      let chosen = "",
+        guessed = [],
+        tries = 6;
+
+      const wordDiv = document.getElementById("word");
+      const lettersDiv = document.getElementById("letters");
+      const message = document.getElementById("message");
+      const popup = document.getElementById("popup");
+      const title = document.getElementById("popup-title");
+      const text = document.getElementById("popup-text");
+      const hintBtn = document.getElementById("hint");
+      const resetBtn = document.getElementById("reset");
+      const playAgainBtn = document.getElementById("popup-btn");
+
+      showLevels();
+
+      function showLevels() {
+        hidePopup();
+        lettersDiv.innerHTML = "";
+        wordDiv.textContent = "";
+        message.textContent = "";
+        document.getElementById("subtitle").textContent =
+          "Choose a level to begin!";
+        ["Easy", "Medium", "Hard"].forEach((lvl) => {
+          const b = document.createElement("button");
+          b.textContent = lvl;
+          b.onclick = () => start(lvl.toLowerCase());
+          lettersDiv.appendChild(b);
+        });
+      }
+
+      function start(lvl) {
+        hidePopup();
+        guessed = [];
+        tries = 6;
+        chosen = pick(words[lvl]);
+        document.body.style.background =
+          "linear-gradient(180deg, #ffbb5c, #ff7b00, #ff5400)";
+        document.getElementById("subtitle").textContent = "";
+        hintBtn.disabled = false;
+        buildKeyboard();
+        showWord();
+      }
+
+      function pick(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function showWord() {
+        const display = chosen
+          .split("")
+          .map((l) => (guessed.includes(l) ? l : "_"))
+          .join(" ");
+        wordDiv.textContent = display;
+        if (!display.includes("_")) endGame(true);
+      }
+
+      function buildKeyboard() {
+        lettersDiv.innerHTML = "";
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((l) => {
+          const btn = document.createElement("button");
+          btn.textContent = l;
+          btn.onclick = () => guess(l, btn);
+          lettersDiv.appendChild(btn);
+        });
+      }
+
+      function guess(l, btn) {
+        btn.disabled = true;
+        guessed.push(l);
+        if (chosen.includes(l)) showWord();
+        else {
+          tries--;
+          message.textContent = `❌ Tries left: ${tries}`;
+          if (tries === 0) endGame(false);
+        }
+      }
+
+      function useHint() {
+        const hidden = chosen.split("").filter((l) => !guessed.includes(l));
+        if (!hidden.length) return;
+        const hint = hidden[Math.floor(Math.random() * hidden.length)];
+        guessed.push(hint);
+        const btn = [...lettersDiv.children].find(
+          (b) => b.textContent === hint
+        );
+        if (btn) btn.disabled = true;
+        message.textContent = `💡 Hint: "${hint}" is in the word!`;
+        showWord();
+        hintBtn.disabled = true;
+      }
+
+      function endGame(win) {
+        [...lettersDiv.children].forEach((b) => (b.disabled = true));
+        hintBtn.disabled = true;
+        popup.style.display = "flex";
+
+        if (win) {
+          title.textContent = "🎉 You Won!";
+          text.textContent = `Great job guessing "${chosen}"!`;
+          showConfetti();
+        } else {
+          title.textContent = "💀 You Lost!";
+          text.textContent = `The word was "${chosen}".`;
+          document.body.style.background = "rgba(0,0,0,0.85)";
+        }
+      }
+
+      function hidePopup() {
+        popup.style.display = "none";
+      }
+
+      function showConfetti() {
+        for (let i = 0; i < 50; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti";
+          c.style.left = Math.random() * 100 + "vw";
+          c.style.top = "0";
+          c.style.background = ["#FFBB5C", "#FF7B00", "#FF5400", "#FFD4A3"][
+            Math.floor(Math.random() * 4)
+          ];
+          c.style.animationDuration = 2 + Math.random() * 2 + "s";
+          document.body.appendChild(c);
+          setTimeout(() => c.remove(), 4000);
+        }
+      }
+
+      hintBtn.onclick = useHint;
+      resetBtn.onclick = showLevels;
+      playAgainBtn.onclick = showLevels;
+    </script>
+  </body>
+</html>
